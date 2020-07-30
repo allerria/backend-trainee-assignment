@@ -2,11 +2,14 @@ package models
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -47,7 +50,7 @@ type Message struct {
 type Interactor interface {
 	CreateUser(username string) (string, error)
 	CreateChat(chatName string, userIDs []string) (uint64, error)
-	CreateMessage(chatID uint64, authorID string, msg string) (uint64, error)
+	CreateMessage(chatID uint64, authorID string, text string) (uint64, error)
 	GetUserChats(userID string) ([]Chat, error)
 	GetChatMessages(chatID uint64) ([]Message, error)
 }
@@ -55,7 +58,6 @@ type Interactor interface {
 func ParseConfigDB() (*ConfigDB, error) {
 	cfg := &ConfigDB{}
 	if err := env.Parse(cfg); err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	return cfg, nil
@@ -64,7 +66,6 @@ func ParseConfigDB() (*ConfigDB, error) {
 func InitDB(config *ConfigDB) (*DB, error) {
 	sqlxDB, err := sqlx.Connect("pgx", "host=localhost port=5432 user=allerria password=root dbname=messenger sslmode=disable")
 	if err != nil {
-		log.Println(err)
 		return nil, err
 	}
 	db := &DB{sqlxDB}
@@ -76,7 +77,6 @@ func generateID() (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	if err != nil {
-		log.Println("Error: can't generate id")
 		return s, err
 	}
 	s = fmt.Sprintf("%x", b)
@@ -86,24 +86,92 @@ func generateID() (string, error) {
 func (db *DB) CreateUser(username string) (string, error) {
 	id, err := generateID()
 	if err != nil {
-		log.Println(err)
 		return "", err
 	}
-	_, err = db.Exec("INSERT INTO users (id, username) VALUES ($1, $2) RETURNING id", id, username)
+	_, err = db.Exec("INSERT INTO users (id, username) VALUES ($1, $2)", id, username)
 	if err != nil {
-		log.Println(err)
 		return "", err
 	}
 	return id, nil
 }
 
 func (db *DB) CreateChat(chatName string, userIDs []string) (uint64, error) {
-
-	return 0, nil
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	rows, err := tx.Query("INSERT INTO chats(name) VALUES($1) RETURNING id", chatName)
+	if err != nil {
+		tx.Rollback()
+		log.Println(err)
+		return 0, err
+	}
+	if !rows.Next() {
+		tx.Rollback()
+		return 0, errors.New("db didn't return created chat id")
+	}
+	var id uint64
+	err = rows.Scan(&id)
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	err = rows.Close()
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	queryStr := "INSERT INTO chats_users (chat_id, user_id) VALUES "
+	vals := []interface{}{}
+	argCount := 1
+	for _, user := range userIDs {
+		queryStr += fmt.Sprintf("($%s, $%s),", strconv.Itoa(argCount), strconv.Itoa(argCount+1))
+		argCount += 2
+		vals = append(vals, id, user)
+	}
+	queryStr = strings.TrimSuffix(queryStr, ",")
+	stmt, err := tx.Prepare(queryStr)
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	_, err = stmt.Exec(vals...)
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	return id, nil
 }
 
-func (db *DB) CreateMessage(chatID uint64, authorID string, msg string) (uint64, error) {
-	return 0, nil
+func (db *DB) CreateMessage(chatID uint64, authorID string, text string) (uint64, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	rows, err := tx.Query("INSERT INTO messages (chat, author, text) VALUES($1, $2, $3) RETURNING id", chatID, authorID, text)
+	if err != nil {
+		tx.Rollback()
+		return 0, err
+	}
+	if !rows.Next() {
+		tx.Rollback()
+		return 0, errors.New("db didn't return created msg id")
+	}
+	var id uint64
+	err = rows.Scan(&id)
+	if err != nil {
+		return 0, err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 func (db *DB) GetUserChats(userID string) ([]Chat, error) {

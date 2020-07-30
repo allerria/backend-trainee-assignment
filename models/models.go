@@ -35,7 +35,7 @@ type User struct {
 type Chat struct {
 	ID        uint64
 	Name      string
-	Users     []uint64
+	Users     []string
 	CreatedAt time.Time `db:"created_at"`
 }
 
@@ -45,6 +45,11 @@ type Message struct {
 	Author    string
 	Text      string
 	CreatedAt time.Time `db:"created_at"`
+}
+
+type ChatUsers struct {
+	ChatID uint64 `db:"chat_id"`
+	UserID string `db:"user_id"`
 }
 
 type Interactor interface {
@@ -175,9 +180,37 @@ func (db *DB) CreateMessage(chatID uint64, authorID string, text string) (uint64
 }
 
 func (db *DB) GetUserChats(userID string) ([]Chat, error) {
-	return nil, nil
+	chats := []Chat{}
+	chatUsers := []ChatUsers{}
+	c := make(map[uint64]*Chat)
+	err := db.Select(&chats, `SELECT id, name, created_at
+FROM (SELECT id, name, created_at
+      FROM chats
+      WHERE id IN (SELECT chat_id FROM chats_users WHERE user_id = $1)) AS t1
+         JOIN (SELECT chat, MAX(created_at) OVER (PARTITION BY id, chat) AS last_msg_time FROM messages) AS t2
+              ON t1.id = t2.chat
+ORDER BY last_msg_time DESC`, userID)
+	if err != nil {
+		return chats, err
+	}
+	for i, chat := range chats {
+		c[chat.ID] = &chats[i]
+	}
+	err = db.Select(&chatUsers, "SELECT chat_id, user_id FROM chats_users WHERE chat_id IN (SELECT chat_id FROM chats_users WHERE user_id = $1)", userID)
+	if err != nil {
+		return chats, err
+	}
+	for _, cu := range chatUsers {
+		c[cu.ChatID].Users = append(c[cu.ChatID].Users, cu.UserID)
+	}
+	return chats, nil
 }
 
 func (db *DB) GetChatMessages(chatID uint64) ([]Message, error) {
-	return nil, nil
+	msgs := []Message{}
+	err := db.Select(&msgs, "SELECT * FROM messages WHERE chat = $1", chatID)
+	if err != nil {
+		return msgs, err
+	}
+	return msgs, nil
 }

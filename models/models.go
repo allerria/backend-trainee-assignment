@@ -27,24 +27,24 @@ type ConfigDB struct {
 }
 
 type User struct {
-	ID        string
-	Username  string
-	CreatedAt time.Time `db:"created_at"`
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at";db:"created_at"`
 }
 
 type Chat struct {
-	ID        uint64
-	Name      string
-	Users     []string
-	CreatedAt time.Time `db:"created_at"`
+	ID        uint64    `json:"id"`
+	Name      string    `json:"name"`
+	Users     []string  `json:"users"`
+	CreatedAt time.Time `json:"created_at";db:"created_at"`
 }
 
 type Message struct {
-	ID        uint64
-	Chat      uint64
-	Author    string
-	Text      string
-	CreatedAt time.Time `db:"created_at"`
+	ID        uint64    `json:"id"`
+	Chat      uint64    `json:"chat"`
+	Author    string    `json:"author"`
+	Text      string    `json:"text"`
+	CreatedAt time.Time `json:"created_at";db:"created_at"`
 }
 
 type ChatUsers struct {
@@ -52,7 +52,7 @@ type ChatUsers struct {
 	UserID string `db:"user_id"`
 }
 
-type Interactor interface {
+type Model interface {
 	CreateUser(username string) (string, error)
 	CreateChat(chatName string, userIDs []string) (uint64, error)
 	CreateMessage(chatID uint64, authorID string, text string) (uint64, error)

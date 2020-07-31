@@ -60,7 +60,7 @@ type Model interface {
 	GetChatMessages(chatID uint64) ([]Message, error)
 }
 
-func ParseConfigDB() (*ConfigDB, error) {
+func ParseConfig() (*ConfigDB, error) {
 	cfg := &ConfigDB{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, err

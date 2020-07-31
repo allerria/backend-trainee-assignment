@@ -11,7 +11,7 @@ import (
 )
 
 type Service struct {
-	DB     *models.DB
+	Model  models.Model
 	Server http.Server
 }
 
@@ -62,7 +62,7 @@ func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	id, err := s.DB.CreateUser(data.Username)
+	id, err := s.Model.CreateUser(data.Username)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -92,7 +92,7 @@ func (s *Service) creatChatHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	id, err := s.DB.CreateChat(data.Name, data.Users)
+	id, err := s.Model.CreateChat(data.Name, data.Users)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -134,7 +134,7 @@ func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	id, err := s.DB.CreateMessage(uint64(chatID), data.Author, data.Text)
+	id, err := s.Model.CreateMessage(uint64(chatID), data.Author, data.Text)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -169,7 +169,7 @@ func (s *Service) getUserChatsHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	chats, err := s.DB.GetUserChats(data.ID)
+	chats, err := s.Model.GetUserChats(data.ID)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -211,7 +211,7 @@ func (s *Service) getChatMessagesHandler(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	chats, err := s.DB.GetChatMessages(uint64(chatID))
+	chats, err := s.Model.GetChatMessages(uint64(chatID))
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)

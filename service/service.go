@@ -43,6 +43,10 @@ type GetChatMessagesRequestBody struct {
 	Chat string `json:"chat"`
 }
 
+type ErrorResponse struct {
+	Message string `json:"message"`
+}
+
 func CreateRouter(s *Service) *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/users/add", s.createUserHandler).Methods(http.MethodPost)
@@ -67,26 +71,38 @@ func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't read request body."})
+		w.Write(msg)
 		return
 	}
+
 	data := CreateUserRequestBody{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't unmarshal request."})
+		w.Write(msg)
 		return
 	}
+
 	id, err := s.Model.CreateUser(data.Username)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't create user."})
+		w.Write(msg)
 		return
 	}
+
 	msg, err := json.Marshal(map[string]string{"id": id})
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"User have been created, but can't marshal id."})
+		w.Write(msg)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(msg)
 }
@@ -97,31 +113,38 @@ func (s *Service) creatChatHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't read request body."})
+		w.Write(msg)
 		return
 	}
+
 	data := CreateChatRequestBody{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't unmarshal request."})
+		w.Write(msg)
 		return
 	}
+
 	id, err := s.Model.CreateChat(data.Name, data.Users)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't create chat."})
+		w.Write(msg)
 		return
 	}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+
 	msg, err := json.Marshal(map[string]uint64{"id": id})
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Chat created, but can't marshal id."})
+		w.Write(msg)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(msg)
 }
@@ -132,12 +155,17 @@ func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't read request body."})
+		w.Write(msg)
 		return
 	}
+
 	data := CreateMessageRequestBody{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't unmarshal request."})
+		w.Write(msg)
 		return
 	}
 	var chatID int
@@ -145,25 +173,29 @@ func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! ChatID is incorrect."})
+		w.Write(msg)
 		return
 	}
+
 	id, err := s.Model.CreateMessage(uint64(chatID), data.Author, data.Text)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't create message."})
+		w.Write(msg)
 		return
 	}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+
 	msg, err := json.Marshal(map[string]uint64{"id": id})
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Message created, but can't unmarshal id."})
+		w.Write(msg)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(msg)
 }
@@ -174,31 +206,38 @@ func (s *Service) getUserChatsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't read request body."})
+		w.Write(msg)
 		return
 	}
+
 	data := GetUserChatsRequestBody{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't unmarshal request."})
+		w.Write(msg)
 		return
 	}
+
 	chats, err := s.Model.GetUserChats(data.ID)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't get user chats."})
+		w.Write(msg)
 		return
 	}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+
 	msg, err := json.Marshal(chats)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't marshal chats."})
+		w.Write(msg)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(msg)
 }
@@ -209,12 +248,17 @@ func (s *Service) getChatMessagesHandler(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't read request body."})
+		w.Write(msg)
 		return
 	}
+
 	data := GetChatMessagesRequestBody{}
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't unmarshal request."})
+		w.Write(msg)
 		return
 	}
 	var chatID int
@@ -222,25 +266,29 @@ func (s *Service) getChatMessagesHandler(w http.ResponseWriter, r *http.Request)
 	if err := json.Unmarshal(body, &data); err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! ChatID is incorrect."})
+		w.Write(msg)
 		return
 	}
+
 	chats, err := s.Model.GetChatMessages(uint64(chatID))
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't get messages."})
+		w.Write(msg)
 		return
 	}
-	if err := json.Unmarshal(body, &data); err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+
 	msg, err := json.Marshal(chats)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
+		msg, _ := json.Marshal(ErrorResponse{"Error! Can't marshal messages."})
+		w.Write(msg)
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write(msg)
 }

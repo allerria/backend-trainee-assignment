@@ -184,12 +184,13 @@ func (db *DB) GetUserChats(userID string) ([]Chat, error) {
 	chatUsers := []ChatUsers{}
 	c := make(map[uint64]*Chat)
 	err := db.Select(&chats, `SELECT id, name, created_at
-FROM (SELECT id, name, created_at
+FROM (SELECT id,
+             name,
+             created_at,
+             (SELECT MAX(created_at) OVER (PARTITION BY id) FROM messages WHERE chat = id) AS last_msg_time
       FROM chats
-      WHERE id IN (SELECT chat_id FROM chats_users WHERE user_id = $1)) AS t1
-         JOIN (SELECT chat, MAX(created_at) OVER (PARTITION BY id, chat) AS last_msg_time FROM messages) AS t2
-              ON t1.id = t2.chat
-ORDER BY last_msg_time DESC`, userID)
+      WHERE id IN (SELECT chat_id FROM chats_users WHERE user_id = $1)
+      ORDER BY last_msg_time DESC) as t`, userID)
 	if err != nil {
 		return chats, err
 	}

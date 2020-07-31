@@ -209,7 +209,7 @@ FROM (SELECT id,
 
 func (db *DB) GetChatMessages(chatID uint64) ([]Message, error) {
 	msgs := []Message{}
-	err := db.Select(&msgs, "SELECT * FROM messages WHERE chat = $1", chatID)
+	err := db.Select(&msgs, "SELECT * FROM messages WHERE chat = $1 ORDER BY created_at ASC", chatID)
 	if err != nil {
 		return msgs, err
 	}

@@ -29,14 +29,14 @@ type ConfigDB struct {
 type User struct {
 	ID        string    `json:"id"`
 	Username  string    `json:"username"`
-	CreatedAt time.Time `json:"created_at";db:"created_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 type Chat struct {
 	ID        uint64    `json:"id"`
 	Name      string    `json:"name"`
 	Users     []string  `json:"users"`
-	CreatedAt time.Time `json:"created_at";db:"created_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 type Message struct {
@@ -44,7 +44,7 @@ type Message struct {
 	Chat      uint64    `json:"chat"`
 	Author    string    `json:"author"`
 	Text      string    `json:"text"`
-	CreatedAt time.Time `json:"created_at";db:"created_at"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 type ChatUsers struct {

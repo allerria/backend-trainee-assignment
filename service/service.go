@@ -3,12 +3,17 @@ package service
 import (
 	"encoding/json"
 	"github.com/allerria/backend-trainee-assignment/models"
+	"github.com/caarlos0/env/v6"
 	"github.com/gorilla/mux"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 )
+
+type ConfigService struct {
+	Port string `env:"SERVICE_PORT" envDefault:"9000"`
+}
 
 type Service struct {
 	Model  models.Model
@@ -46,6 +51,14 @@ func CreateRouter(s *Service) *mux.Router {
 	r.HandleFunc("/messages/add", s.createMessageHandler).Methods(http.MethodPost)
 	r.HandleFunc("/messages/get", s.getChatMessagesHandler).Methods(http.MethodPost)
 	return r
+}
+
+func ParseConfig() (*ConfigService, error) {
+	cfg := &ConfigService{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) {

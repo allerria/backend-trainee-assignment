@@ -4,20 +4,21 @@ import (
 	"fmt"
 	"github.com/allerria/backend-trainee-assignment/models"
 	"github.com/allerria/backend-trainee-assignment/service"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
 )
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Hi!")
-}
-
-func serve() {
-	r := mux.NewRouter()
-	r.HandleFunc("/", indexHandler)
-	log.Fatal(http.ListenAndServe(":8080", r))
+func serve(db *models.DB, cfg *service.ConfigService) {
+	s := &service.Service{
+		Model: db,
+	}
+	s.Server = http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Handler: service.CreateRouter(s),
+	}
+	log.Println("Start server on port 9000")
+	log.Fatal(s.Server.ListenAndServe())
 }
 
 // Для дебага на windows
@@ -25,11 +26,12 @@ func setEnvVariables() {
 	os.Setenv("POSTGRES_USER", "allerria")
 	os.Setenv("POSTGRES_PASS", "root")
 	os.Setenv("POSTGRES_DATABASE", "messenger")
+	os.Setenv("SERVICE_PORT", "9000")
 }
 
 func main() {
 	setEnvVariables()
-	cfgDB, err := models.ParseConfigDB()
+	cfgDB, err := models.ParseConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,12 +39,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	s := &service.Service{
-		DB: db,
+	cfgService, err := service.ParseConfig()
+	if err != nil {
+		log.Fatal(err)
 	}
-	s.Server = http.Server{
-		Addr:    ":9000",
-		Handler: service.CreateRouter(s),
-	}
-	log.Fatal(s.Server.ListenAndServe())
+	serve(db, cfgService)
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/caarlos0/env/v6"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -68,8 +67,13 @@ func ParseConfig() (*ConfigDB, error) {
 	return cfg, nil
 }
 
-func InitDB(config *ConfigDB) (*DB, error) {
-	sqlxDB, err := sqlx.Connect("pgx", "host=localhost port=5432 user=allerria password=root dbname=messenger sslmode=disable")
+func InitDB() (*DB, error) {
+	cfg, err := ParseConfig()
+	if err != nil {
+		return nil, err
+	}
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Host, cfg.Port, cfg.User, cfg.Pass, cfg.Database, cfg.SslMode)
+	sqlxDB, err := sqlx.Connect("pgx", connStr)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +93,9 @@ func generateID() (string, error) {
 }
 
 func (db *DB) CreateUser(username string) (string, error) {
+	if err := validateCreateUserInput(username); err != nil {
+		return "", err
+	}
 	id, err := generateID()
 	if err != nil {
 		return "", err
@@ -101,31 +108,22 @@ func (db *DB) CreateUser(username string) (string, error) {
 }
 
 func (db *DB) CreateChat(chatName string, userIDs []string) (uint64, error) {
+	if err := validateCreateChatInput(chatName, userIDs); err != nil {
+		return 0, err
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return 0, err
 	}
-	rows, err := tx.Query("INSERT INTO chats(name) VALUES($1) RETURNING id", chatName)
-	if err != nil {
-		tx.Rollback()
-		log.Println(err)
-		return 0, err
-	}
-	if !rows.Next() {
-		tx.Rollback()
-		return 0, errors.New("db didn't return created chat id")
-	}
+
 	var id uint64
-	err = rows.Scan(&id)
+	err = tx.QueryRow("INSERT INTO chats(name) VALUES($1) RETURNING id", chatName).Scan(&id)
 	if err != nil {
 		tx.Rollback()
 		return 0, err
 	}
-	err = rows.Close()
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
+
 	queryStr := "INSERT INTO chats_users (chat_id, user_id) VALUES "
 	vals := []interface{}{}
 	argCount := 1
@@ -154,35 +152,44 @@ func (db *DB) CreateChat(chatName string, userIDs []string) (uint64, error) {
 }
 
 func (db *DB) CreateMessage(chatID uint64, authorID string, text string) (uint64, error) {
+	if err := validateCreateMessageInput(chatID, authorID, text); err != nil {
+		return 0, err
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return 0, err
 	}
-	rows, err := tx.Query("INSERT INTO messages (chat, author, text) VALUES($1, $2, $3) RETURNING id", chatID, authorID, text)
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	if !rows.Next() {
-		tx.Rollback()
-		return 0, errors.New("db didn't return created msg id")
-	}
+
 	var id uint64
-	err = rows.Scan(&id)
+	err = tx.QueryRow("INSERT INTO messages (chat, author, text) VALUES($1, $2, $3) RETURNING id", chatID, authorID, text).Scan(&id)
 	if err != nil {
+		tx.Rollback()
 		return 0, err
 	}
 	err = tx.Commit()
 	if err != nil {
+		tx.Rollback()
 		return 0, err
 	}
 	return id, nil
 }
 
 func (db *DB) GetUserChats(userID string) ([]Chat, error) {
+	if err := validateUserID(userID); err != nil {
+		return nil, err
+	}
+
+	if exist, err := db.CheckUserExist(userID); err != nil {
+		return nil, err
+	} else if !exist {
+		return nil, errors.New(fmt.Sprintf("user with id: %s doesn't exist", userID))
+	}
+
 	chats := []Chat{}
 	chatUsers := []ChatUsers{}
 	c := make(map[uint64]*Chat)
+
 	err := db.Select(&chats, `SELECT id, name, created_at
 FROM (SELECT id,
              name,
@@ -194,6 +201,7 @@ FROM (SELECT id,
 	if err != nil {
 		return chats, err
 	}
+
 	for i, chat := range chats {
 		c[chat.ID] = &chats[i]
 	}
@@ -208,10 +216,38 @@ FROM (SELECT id,
 }
 
 func (db *DB) GetChatMessages(chatID uint64) ([]Message, error) {
+	if err := validateChatID(chatID); err != nil {
+		return nil, err
+	}
+
+	if exist, err := db.CheckChatExist(chatID); err != nil {
+		return nil, err
+	} else if !exist {
+		return nil, errors.New(fmt.Sprintf("chat with id: %d doesn't exist", chatID))
+	}
+
 	msgs := []Message{}
 	err := db.Select(&msgs, "SELECT * FROM messages WHERE chat = $1 ORDER BY created_at ASC", chatID)
 	if err != nil {
 		return msgs, err
 	}
 	return msgs, nil
+}
+
+func (db *DB) CheckUserExist(ID string) (bool, error) {
+	newID := ""
+	err := db.Select(&newID, "SELECT id FROM users WHERE id = $1", ID)
+	if err != nil {
+		return false, err
+	}
+	return newID == ID, nil
+}
+
+func (db *DB) CheckChatExist(ID uint64) (bool, error) {
+	var newID uint64
+	err := db.Select(&newID, "SELECT id FROM chats WHERE id = $1", ID)
+	if err != nil {
+		return false, err
+	}
+	return newID == ID, nil
 }

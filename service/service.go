@@ -2,12 +2,14 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/allerria/backend-trainee-assignment/models"
 	"github.com/caarlos0/env/v6"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 type ConfigService struct {
@@ -40,10 +42,6 @@ type GetUserChatsRequestBody struct {
 
 type GetChatMessagesRequestBody struct {
 	Chat string `json:"chat"`
-}
-
-type ErrorResponse struct {
-	Message string `json:"message"`
 }
 
 type appError struct {
@@ -114,7 +112,7 @@ func (s *Service) creatChatHandler(w http.ResponseWriter, r *http.Request) *appE
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	if err := json.NewEncoder(w).Encode(map[string]uint64{"id": id}); err != nil {
+	if err := json.NewEncoder(w).Encode(map[string]string{"id": strconv.Itoa(int(id))}); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 	return nil
@@ -139,7 +137,7 @@ func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) *
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	if err := json.NewEncoder(w).Encode(map[string]uint64{"id": id}); err != nil {
+	if err := json.NewEncoder(w).Encode(map[string]string{"id": strconv.Itoa(int(id))}); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 	return nil

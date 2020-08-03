@@ -2,7 +2,6 @@ package models
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"github.com/caarlos0/env/v6"
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -105,27 +104,15 @@ func (db *DB) CreateChat(chatName string, userIDs []string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	rows, err := tx.Query("INSERT INTO chats(name) VALUES($1) RETURNING id", chatName)
+
+	var id uint64
+	err = tx.QueryRow("INSERT INTO chats(name) VALUES($1) RETURNING id", chatName).Scan(&id)
 	if err != nil {
 		tx.Rollback()
 		log.Println(err)
 		return 0, err
 	}
-	if !rows.Next() {
-		tx.Rollback()
-		return 0, errors.New("db didn't return created chat id")
-	}
-	var id uint64
-	err = rows.Scan(&id)
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	err = rows.Close()
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
+
 	queryStr := "INSERT INTO chats_users (chat_id, user_id) VALUES "
 	vals := []interface{}{}
 	argCount := 1
@@ -158,17 +145,9 @@ func (db *DB) CreateMessage(chatID uint64, authorID string, text string) (uint64
 	if err != nil {
 		return 0, err
 	}
-	rows, err := tx.Query("INSERT INTO messages (chat, author, text) VALUES($1, $2, $3) RETURNING id", chatID, authorID, text)
-	if err != nil {
-		tx.Rollback()
-		return 0, err
-	}
-	if !rows.Next() {
-		tx.Rollback()
-		return 0, errors.New("db didn't return created msg id")
-	}
+
 	var id uint64
-	err = rows.Scan(&id)
+	err = tx.QueryRow("INSERT INTO messages (chat, author, text) VALUES($1, $2, $3) RETURNING id", chatID, authorID, text).Scan(&id)
 	if err != nil {
 		return 0, err
 	}
@@ -183,6 +162,7 @@ func (db *DB) GetUserChats(userID string) ([]Chat, error) {
 	chats := []Chat{}
 	chatUsers := []ChatUsers{}
 	c := make(map[uint64]*Chat)
+
 	err := db.Select(&chats, `SELECT id, name, created_at
 FROM (SELECT id,
              name,
@@ -194,6 +174,7 @@ FROM (SELECT id,
 	if err != nil {
 		return chats, err
 	}
+
 	for i, chat := range chats {
 		c[chat.ID] = &chats[i]
 	}

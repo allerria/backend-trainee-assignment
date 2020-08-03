@@ -27,24 +27,24 @@ type ConfigDB struct {
 }
 
 type User struct {
-	ID        string
-	Username  string
-	CreatedAt time.Time `db:"created_at"`
+	ID        string    `json:"id"`
+	Username  string    `json:"username"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 type Chat struct {
-	ID        uint64
-	Name      string
-	Users     []string
-	CreatedAt time.Time `db:"created_at"`
+	ID        uint64    `json:"id"`
+	Name      string    `json:"name"`
+	Users     []string  `json:"users"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 type Message struct {
-	ID        uint64
-	Chat      uint64
-	Author    string
-	Text      string
-	CreatedAt time.Time `db:"created_at"`
+	ID        uint64    `json:"id"`
+	Chat      uint64    `json:"chat"`
+	Author    string    `json:"author"`
+	Text      string    `json:"text"`
+	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
 
 type ChatUsers struct {
@@ -52,7 +52,7 @@ type ChatUsers struct {
 	UserID string `db:"user_id"`
 }
 
-type Interactor interface {
+type Model interface {
 	CreateUser(username string) (string, error)
 	CreateChat(chatName string, userIDs []string) (uint64, error)
 	CreateMessage(chatID uint64, authorID string, text string) (uint64, error)
@@ -60,7 +60,7 @@ type Interactor interface {
 	GetChatMessages(chatID uint64) ([]Message, error)
 }
 
-func ParseConfigDB() (*ConfigDB, error) {
+func ParseConfig() (*ConfigDB, error) {
 	cfg := &ConfigDB{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, err
@@ -184,12 +184,13 @@ func (db *DB) GetUserChats(userID string) ([]Chat, error) {
 	chatUsers := []ChatUsers{}
 	c := make(map[uint64]*Chat)
 	err := db.Select(&chats, `SELECT id, name, created_at
-FROM (SELECT id, name, created_at
+FROM (SELECT id,
+             name,
+             created_at,
+             (SELECT MAX(created_at) OVER (PARTITION BY id) FROM messages WHERE chat = id) AS last_msg_time
       FROM chats
-      WHERE id IN (SELECT chat_id FROM chats_users WHERE user_id = $1)) AS t1
-         JOIN (SELECT chat, MAX(created_at) OVER (PARTITION BY id, chat) AS last_msg_time FROM messages) AS t2
-              ON t1.id = t2.chat
-ORDER BY last_msg_time DESC`, userID)
+      WHERE id IN (SELECT chat_id FROM chats_users WHERE user_id = $1)
+      ORDER BY last_msg_time DESC) as t`, userID)
 	if err != nil {
 		return chats, err
 	}
@@ -208,7 +209,7 @@ ORDER BY last_msg_time DESC`, userID)
 
 func (db *DB) GetChatMessages(chatID uint64) ([]Message, error) {
 	msgs := []Message{}
-	err := db.Select(&msgs, "SELECT * FROM messages WHERE chat = $1", chatID)
+	err := db.Select(&msgs, "SELECT * FROM messages WHERE chat = $1 ORDER BY created_at ASC", chatID)
 	if err != nil {
 		return msgs, err
 	}

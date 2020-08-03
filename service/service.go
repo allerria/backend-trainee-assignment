@@ -52,6 +52,40 @@ type appError struct {
 
 type appHandler func(http.ResponseWriter, *http.Request) *appError
 
+func ParseConfig() (*ConfigService, error) {
+	cfg := &ConfigService{}
+	if err := env.Parse(cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func InitService() (*Service, error) {
+	db, err := models.InitDB()
+	if err != nil {
+		return nil, err
+	}
+	cfg, err := ParseConfig()
+	if err != nil {
+		return nil, err
+	}
+	s := &Service{
+		Model: db,
+	}
+	s.Server = http.Server{
+		Addr:    fmt.Sprintf(":%s", cfg.Port),
+		Handler: CreateRouter(s),
+	}
+	return s, nil
+}
+
+func (s *Service) Serve() {
+	defer s.Model.(*models.DB).Close()
+	port := strings.Split(s.Server.Addr, ":")[1]
+	log.Println(fmt.Sprintf("Start server on port %s", port))
+	log.Fatal(s.Server.ListenAndServe())
+}
+
 func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e := fn(w, r); e != nil {
 		log.Println(e.Error)
@@ -70,14 +104,6 @@ func CreateRouter(s *Service) *mux.Router {
 	mr.HandleFunc("/add", appHandler(s.createMessageHandler).ServeHTTP).Methods(http.MethodPost)
 	mr.HandleFunc("/get", appHandler(s.getChatMessagesHandler).ServeHTTP).Methods(http.MethodPost)
 	return r
-}
-
-func ParseConfig() (*ConfigService, error) {
-	cfg := &ConfigService{}
-	if err := env.Parse(cfg); err != nil {
-		return nil, err
-	}
-	return cfg, nil
 }
 
 func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) *appError {

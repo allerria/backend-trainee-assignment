@@ -67,8 +67,13 @@ func ParseConfig() (*ConfigDB, error) {
 	return cfg, nil
 }
 
-func InitDB(config *ConfigDB) (*DB, error) {
-	sqlxDB, err := sqlx.Connect("pgx", "host=localhost port=5432 user=allerria password=root dbname=messenger sslmode=disable")
+func InitDB() (*DB, error) {
+	cfg, err := ParseConfig()
+	if err != nil {
+		return nil, err
+	}
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", cfg.Host, cfg.Port, cfg.User, cfg.Pass, cfg.Database, cfg.SslMode)
+	sqlxDB, err := sqlx.Connect("pgx", connStr)
 	if err != nil {
 		return nil, err
 	}

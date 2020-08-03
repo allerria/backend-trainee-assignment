@@ -5,7 +5,6 @@ import (
 	"github.com/allerria/backend-trainee-assignment/models"
 	"github.com/caarlos0/env/v6"
 	"github.com/gorilla/mux"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -85,13 +84,9 @@ func ParseConfig() (*ConfigService, error) {
 
 func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) *appError {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
-	}
 
 	data := CreateUserRequestBody{}
-	if err := json.Unmarshal(body, &data); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
@@ -100,25 +95,17 @@ func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) *app
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	msg, err := json.Marshal(map[string]string{"id": id})
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(map[string]string{"id": id}); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(msg)
 	return nil
 }
 
 func (s *Service) creatChatHandler(w http.ResponseWriter, r *http.Request) *appError {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
-	}
 
 	data := CreateChatRequestBody{}
-	if err := json.Unmarshal(body, &data); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
@@ -127,29 +114,22 @@ func (s *Service) creatChatHandler(w http.ResponseWriter, r *http.Request) *appE
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	msg, err := json.Marshal(map[string]uint64{"id": id})
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(map[string]uint64{"id": id}); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(msg)
 	return nil
 }
 
 func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) *appError {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
+
+	data := CreateMessageRequestBody{}
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	data := CreateMessageRequestBody{}
-	if err := json.Unmarshal(body, &data); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
-	}
 	var chatID int
-	chatID, err = strconv.Atoi(data.Chat)
+	chatID, err := strconv.Atoi(data.Chat)
 	if err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
@@ -159,25 +139,17 @@ func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) *
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	msg, err := json.Marshal(map[string]uint64{"id": id})
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(map[string]uint64{"id": id}); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(msg)
 	return nil
 }
 
 func (s *Service) getUserChatsHandler(w http.ResponseWriter, r *http.Request) *appError {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
-	}
 
 	data := GetUserChatsRequestBody{}
-	if err := json.Unmarshal(body, &data); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
@@ -186,44 +158,33 @@ func (s *Service) getUserChatsHandler(w http.ResponseWriter, r *http.Request) *a
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	msg, err := json.Marshal(chats)
-	if err != nil {
+	if err := json.NewEncoder(w).Encode(chats); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write(msg)
 	return nil
 }
 
 func (s *Service) getChatMessagesHandler(w http.ResponseWriter, r *http.Request) *appError {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
-	}
 
 	data := GetChatMessagesRequestBody{}
-	if err := json.Unmarshal(body, &data); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
+
 	var chatID int
-	chatID, err = strconv.Atoi(data.Chat)
-	if err := json.Unmarshal(body, &data); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
-	}
-
-	chats, err := s.Model.GetChatMessages(uint64(chatID))
+	chatID, err := strconv.Atoi(data.Chat)
 	if err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	msg, err := json.Marshal(chats)
+	messages, err := s.Model.GetChatMessages(uint64(chatID))
 	if err != nil {
 		return &appError{err, err.Error(), http.StatusInternalServerError}
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write(msg)
+	if err := json.NewEncoder(w).Encode(messages); err != nil {
+		return &appError{err, err.Error(), http.StatusInternalServerError}
+	}
 	return nil
 }

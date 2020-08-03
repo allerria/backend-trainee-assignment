@@ -6,7 +6,6 @@ import (
 	"github.com/caarlos0/env/v6"
 	_ "github.com/jackc/pgx/v4/stdlib"
 	"github.com/jmoiron/sqlx"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -109,7 +108,6 @@ func (db *DB) CreateChat(chatName string, userIDs []string) (uint64, error) {
 	err = tx.QueryRow("INSERT INTO chats(name) VALUES($1) RETURNING id", chatName).Scan(&id)
 	if err != nil {
 		tx.Rollback()
-		log.Println(err)
 		return 0, err
 	}
 
@@ -149,10 +147,12 @@ func (db *DB) CreateMessage(chatID uint64, authorID string, text string) (uint64
 	var id uint64
 	err = tx.QueryRow("INSERT INTO messages (chat, author, text) VALUES($1, $2, $3) RETURNING id", chatID, authorID, text).Scan(&id)
 	if err != nil {
+		tx.Rollback()
 		return 0, err
 	}
 	err = tx.Commit()
 	if err != nil {
+		tx.Rollback()
 		return 0, err
 	}
 	return id, nil

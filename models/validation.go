@@ -61,6 +61,8 @@ func validateCreateChatInput(chatName string, userIDs []string) error {
 		return ErrChatNameEmpty
 	}
 
+	// Map is here to find repetitive users. By default value is false, if occur we set it to true.
+	// If we see users[userIDs[i]] is true then user is repetitive.
 	users := make(map[string]bool, len(userIDs))
 
 	for i := range userIDs {

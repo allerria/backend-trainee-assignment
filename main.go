@@ -6,9 +6,9 @@ import (
 )
 
 func main() {
-	service, err := service.InitService()
+	s, err := service.InitService()
 	if err != nil {
 		log.Fatal(err)
 	}
-	service.Serve()
+	s.Serve()
 }

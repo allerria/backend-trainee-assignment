@@ -87,7 +87,7 @@ func (s *Service) Serve() {
 
 func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e := fn(w, r); e != nil {
-		log.Println(e.Error)
+		log.Printf("Error: %s %s - %s", r.Method, r.URL.EscapedPath(), e.Error)
 		http.Error(w, e.Error.Error(), e.Code)
 	}
 }

@@ -16,6 +16,8 @@ type DB struct {
 	*sqlx.DB
 }
 
+// ConfigDB contains database connection information. Also used by "env" library for parsing this struct from
+// environment variables.
 type ConfigDB struct {
 	User     string `env:"POSTGRES_USER,required"`
 	Pass     string `env:"POSTGRES_PASS,required"`
@@ -51,6 +53,7 @@ type ChatUsers struct {
 	UserID string `db:"user_id"`
 }
 
+// Model interface is database API.
 type Model interface {
 	CreateUser(username string) (string, error)
 	CreateChat(chatName string, userIDs []string) (uint64, error)
@@ -110,6 +113,7 @@ func InitDB() (*DB, error) {
 	return db, nil
 }
 
+// generateID generates UUID - string of 32 length.
 func generateID() (string, error) {
 	var s string
 	b := make([]byte, 16)
@@ -121,6 +125,7 @@ func generateID() (string, error) {
 	return s, nil
 }
 
+// CreateUser returns generated ID if creates user in database else return error.
 func (db *DB) CreateUser(username string) (string, error) {
 	if err := validateCreateUserInput(username); err != nil {
 		return "", err
@@ -187,6 +192,7 @@ func (db *DB) CreateChat(chatName string, userIDs []string) (uint64, error) {
 	return id, nil
 }
 
+// CreateMessage returns created message ID if creates message in database else returns error
 func (db *DB) CreateMessage(chatID uint64, authorID string, text string) (uint64, error) {
 	if err := validateCreateMessageInput(chatID, authorID, text); err != nil {
 		return 0, err
@@ -212,6 +218,7 @@ func (db *DB) CreateMessage(chatID uint64, authorID string, text string) (uint64
 	return id, nil
 }
 
+// GetUserChats returns user chats or error
 func (db *DB) GetUserChats(userID string) ([]Chat, error) {
 	if err := validateUserID(userID); err != nil {
 		return nil, err
@@ -245,6 +252,7 @@ func (db *DB) GetUserChats(userID string) ([]Chat, error) {
 	return chats, nil
 }
 
+// GetChatMessages returns chat messages or error
 func (db *DB) GetChatMessages(chatID uint64) ([]Message, error) {
 	if err := validateChatID(chatID); err != nil {
 		return nil, err

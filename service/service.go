@@ -45,9 +45,8 @@ type GetChatMessagesRequestBody struct {
 }
 
 type appError struct {
-	Error   error
-	Message string
-	Code    int
+	Error error
+	Code  int
 }
 
 type appHandler func(http.ResponseWriter, *http.Request) *appError
@@ -89,7 +88,7 @@ func (s *Service) Serve() {
 func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e := fn(w, r); e != nil {
 		log.Println(e.Error)
-		http.Error(w, e.Message, e.Code)
+		http.Error(w, e.Error.Error(), e.Code)
 	}
 }
 
@@ -111,16 +110,16 @@ func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) *app
 
 	data := CreateUserRequestBody{}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	id, err := s.Model.CreateUser(data.Username)
 	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	if err := json.NewEncoder(w).Encode(map[string]string{"id": id}); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 	return nil
 }
@@ -130,16 +129,16 @@ func (s *Service) creatChatHandler(w http.ResponseWriter, r *http.Request) *appE
 
 	data := CreateChatRequestBody{}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	id, err := s.Model.CreateChat(data.Name, data.Users)
 	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	if err := json.NewEncoder(w).Encode(map[string]string{"id": strconv.Itoa(int(id))}); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 	return nil
 }
@@ -149,22 +148,22 @@ func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) *
 
 	data := CreateMessageRequestBody{}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	var chatID int
 	chatID, err := strconv.Atoi(data.Chat)
 	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	id, err := s.Model.CreateMessage(uint64(chatID), data.Author, data.Text)
 	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	if err := json.NewEncoder(w).Encode(map[string]string{"id": strconv.Itoa(int(id))}); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 	return nil
 }
@@ -174,16 +173,16 @@ func (s *Service) getUserChatsHandler(w http.ResponseWriter, r *http.Request) *a
 
 	data := GetUserChatsRequestBody{}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	chats, err := s.Model.GetUserChats(data.ID)
 	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	if err := json.NewEncoder(w).Encode(chats); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 	return nil
 }
@@ -193,22 +192,22 @@ func (s *Service) getChatMessagesHandler(w http.ResponseWriter, r *http.Request)
 
 	data := GetChatMessagesRequestBody{}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	var chatID int
 	chatID, err := strconv.Atoi(data.Chat)
 	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	messages, err := s.Model.GetChatMessages(uint64(chatID))
 	if err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 
 	if err := json.NewEncoder(w).Encode(messages); err != nil {
-		return &appError{err, err.Error(), http.StatusInternalServerError}
+		return &appError{err, http.StatusInternalServerError}
 	}
 	return nil
 }

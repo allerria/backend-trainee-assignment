@@ -118,9 +118,7 @@ func (s *Service) createUserHandler(w http.ResponseWriter, r *http.Request) *app
 		return &appError{err, http.StatusInternalServerError}
 	}
 
-	if err := json.NewEncoder(w).Encode(map[string]string{"id": id}); err != nil {
-		return &appError{err, http.StatusInternalServerError}
-	}
+	w.Write([]byte(id))
 	return nil
 }
 
@@ -137,9 +135,7 @@ func (s *Service) creatChatHandler(w http.ResponseWriter, r *http.Request) *appE
 		return &appError{err, http.StatusInternalServerError}
 	}
 
-	if err := json.NewEncoder(w).Encode(map[string]string{"id": strconv.Itoa(int(id))}); err != nil {
-		return &appError{err, http.StatusInternalServerError}
-	}
+	w.Write([]byte(strconv.Itoa(int(id))))
 	return nil
 }
 
@@ -162,9 +158,7 @@ func (s *Service) createMessageHandler(w http.ResponseWriter, r *http.Request) *
 		return &appError{err, http.StatusInternalServerError}
 	}
 
-	if err := json.NewEncoder(w).Encode(map[string]string{"id": strconv.Itoa(int(id))}); err != nil {
-		return &appError{err, http.StatusInternalServerError}
-	}
+	w.Write([]byte(strconv.Itoa(int(id))))
 	return nil
 }
 
